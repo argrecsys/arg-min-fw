@@ -30,10 +30,21 @@ def read_app_setup() -> dict:
 
 
 def start_app(app_setup: dict):
+
+    # Task variables
     dateset_name = app_setup["dataset"]
     dataset_path = f"src/app/data/{dateset_name}"
-    fm_engine = Engine()
-    fm_engine.load_dataset(dataset_path)
+    text_column = "sent_text"
+    label_column = "sent_label1"
+    label_dict = {"NO": 0, "YES": 1}
+    num_labels = len(label_dict)
+
+    # Use framework
+    fm_engine = Engine(True)
+    fm_engine.load_data(dataset_path, text_column, label_column, label_dict)
+    fm_engine.split_data(
+        test_size=0.1, validation_size=0.1, shuffled=True, random_state=42
+    )
 
 
 #####################
