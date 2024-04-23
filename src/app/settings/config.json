@@ -1,3 +1,4 @@
 {
-    "dataset": "dm-2019-annotated.csv"
+    "dataset": "dm-2019-annotated.csv",
+    "task": 1
 }
