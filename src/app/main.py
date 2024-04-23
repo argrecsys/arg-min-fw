@@ -45,6 +45,7 @@ def start_app(app_setup: dict):
     fm_engine.split_data(
         test_size=0.1, validation_size=0.1, shuffled=True, random_state=42
     )
+    fm_engine.create_features()
 
 
 #####################
