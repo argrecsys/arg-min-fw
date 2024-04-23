@@ -11,7 +11,7 @@ Execute the following commands in your terminal to condition the environment to 
 ```console
 cd /arg-min-fm
 python -m venv .venv
-.\.venv\Scripts\activate
+.venv/Scripts/activate
 ```
 
 ## Authors
