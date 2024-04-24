@@ -4,15 +4,17 @@ from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
 from transformers import InputFeatures
 
-# from algos.nn1_algo import MM1Model
+from .algos.nn1_algo import NN1Model
 
 
 class Engine:
 
-    def __init__(self, verbose: bool = False) -> None:
+    def __init__(self, task_number: int, verbose: bool = False) -> None:
+        self.task_number = task_number
         self.verbose = verbose
         self.sent_column = "sentence"
         self.target_column = "label"
+        self.model_list = [NN1Model]
 
     def __print(self, values) -> None:
         if self.verbose:
@@ -124,3 +126,13 @@ class Engine:
 
         test_texts = self.test_set[self.sent_column]
         test_labels = self.test_set[self.target_column]
+
+    def load_algorithms(self) -> int:
+        self.models = {}
+
+        for model_type in self.model_list:
+            algo = model_type(self.task_number)
+            self.models[algo.name] = algo
+        print(self.models)
+
+        return len(self.models)
