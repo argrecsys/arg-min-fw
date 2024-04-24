@@ -63,14 +63,23 @@ class NN1Model:
 
         self.input_size = self.x_training[0].shape[0]
 
+    def get_ds_training(self) -> tuple:
+        training_ds = (self.x_training, self.y_training)
+        return training_ds
+
+    def get_ds_validation(self) -> tuple:
+        validation_ds = (self.x_validation, self.y_validation)
+        return validation_ds
+
+    def get_ds_test(self) -> tuple:
+        test_ds = (self.x_test, self.y_test)
+        return test_ds
+
     def create_model(self):
         model = Sequential()
         model.add(Dense(units=16, activation="relu", input_shape=(self.input_size,)))
         model.add(Dense(units=self.last_units, activation=self.last_activation))
-        self.model = model
-
-    def get_model(self):
-        return self.model
+        return model
 
     def get_hyper_params(self):
         return self.hyperparam

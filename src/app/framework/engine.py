@@ -1,7 +1,10 @@
+from datetime import datetime
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
 import optuna
+import tf_keras
+from functools import partial
 
 from .algos.nn1_algo import NN1Model
 
@@ -19,8 +22,33 @@ class Engine:
         if self.verbose:
             print(values)
 
-    def __objective(self, trial, model):
-        pass
+    def __objective(self, trial, algorithm):
+
+        # Model variables
+        model = algorithm.create_model()
+        train_dataset = algorithm.get_ds_training()
+        validation_dataset = algorithm.get_ds_validation()
+
+        # Adjustable hyperparameters
+        hp_learning_rate = trial.suggest_float("learning_rate", 1e-6, 1e-4, log=True)
+        hp_epsilon = trial.suggest_float("epsilon", 1e-9, 1e-7, log=True)
+        hp_epochs = trial.suggest_int("epochs", 2, 7, step=1)
+        optimizer = tf_keras.optimizers.Adam(
+            learning_rate=hp_learning_rate, epsilon=hp_epsilon, clipnorm=1.0
+        )
+
+        # Fixed hyperparameters
+        loss = tf_keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+        metric = tf_keras.metrics.SparseCategoricalAccuracy("accuracy")
+
+        model.compile(optimizer=optimizer, loss=loss, metrics=[metric])
+
+        # Train and evaluate using tf.keras.Model.fit()
+        history = model.fit(
+            train_dataset, validation_data=validation_dataset, epochs=hp_epochs
+        )
+
+        return history.history["val_accuracy"][-1]
 
     def load_data(
         self, dataset_path: str, text_column: str, label_column: str, label_dict: dict
@@ -82,7 +110,7 @@ class Engine:
         self.test_labels = test_set[self.target_column]
 
     def load_algorithms(self) -> int:
-        self.models = {}
+        self.algorithms = {}
 
         for model_type in self.model_list:
             algo = model_type(self.task_number)
@@ -94,13 +122,15 @@ class Engine:
                 self.test_texts,
                 self.test_labels,
             )
-            self.models[algo.name] = algo
+            self.algorithms[algo.name] = algo
 
-        self.__print(self.models)
-        return len(self.models)
+        return len(self.algorithms)
 
     def run_optimization(self, n_trials: int = 5) -> None:
 
-        for model in self.models:
+        for name, algorithm in self.algorithms.items():
+            print(f"{datetime.now()} - Optimizing model: {name}")
+            objective_with_model = partial(self.__objective, algorithm=algorithm)
+
             study = optuna.create_study(direction="minimize")
-            study.optimize(self.__objective, n_trials, model)
+            study.optimize(objective_with_model, n_trials)
