@@ -1,8 +1,7 @@
 import pandas as pd
-import tensorflow as tf
 from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
-from transformers import InputFeatures
+import optuna
 
 from .algos.nn1_algo import NN1Model
 
@@ -20,52 +19,8 @@ class Engine:
         if self.verbose:
             print(values)
 
-    def __convert_examples_to_features(self, tokenizer, texts, labels):
-        labels = list(labels)
-        batch_encoding = tokenizer.batch_encode_plus(
-            texts, max_length=128, padding="longest"
-        )
-
-        features = []
-        for i in range(len(texts)):
-            inputs = {k: batch_encoding[k][i] for k in batch_encoding}
-            feature = InputFeatures(**inputs, label=labels[i])
-            features.append(feature)
-
-        return features
-
-    def __convert_features_to_tf_dataset(self, features):
-        def gen():
-            for ex in features:
-                yield (
-                    {
-                        "input_ids": ex.input_ids,
-                        "attention_mask": ex.attention_mask,
-                        "token_type_ids": ex.token_type_ids,
-                    },
-                    ex.label,
-                )
-
-        output_types = (
-            {
-                "input_ids": tf.int32,
-                "attention_mask": tf.int32,
-                "token_type_ids": tf.int32,
-            },
-            tf.int32,
-        )
-
-        output_shapes = (
-            {
-                "input_ids": tf.TensorShape([None]),
-                "attention_mask": tf.TensorShape([None]),
-                "token_type_ids": tf.TensorShape([None]),
-            },
-            tf.TensorShape([]),
-        )
-
-        dataset = tf.data.Dataset.from_generator(gen, output_types, output_shapes)
-        return dataset
+    def __objective(self, trial, model):
+        pass
 
     def load_data(
         self, dataset_path: str, text_column: str, label_column: str, label_dict: dict
@@ -105,34 +60,47 @@ class Engine:
 
         # Shuffle datasets
         if shuffled:
-            self.training_set = shuffle(train)
-            self.validation_set = shuffle(validation)
-            self.test_set = shuffle(test)
+            training_set = shuffle(train)
+            validation_set = shuffle(validation)
+            test_set = shuffle(test)
         else:
-            self.training_set = train
-            self.validation_set = validation
-            self.test_set = test
+            training_set = train
+            validation_set = validation
+            test_set = test
 
-        self.__print(f"Training size: {len(self.training_set)}")
-        self.__print(f"Validation size: {len(self.validation_set)}")
-        self.__print(f"Test size: {len(self.test_set)}")
+        self.__print(f"Training size: {len(training_set)}")
+        self.__print(f"Validation size: {len(validation_set)}")
+        self.__print(f"Test size: {len(test_set)}")
 
-    def create_features(self) -> None:
-        train_texts = self.training_set[self.sent_column]
-        train_labels = self.training_set[self.target_column]
+        self.train_texts = training_set[self.sent_column]
+        self.train_labels = training_set[self.target_column]
 
-        validation_texts = self.validation_set[self.sent_column]
-        validation_labels = self.validation_set[self.target_column]
+        self.validation_texts = validation_set[self.sent_column]
+        self.validation_labels = validation_set[self.target_column]
 
-        test_texts = self.test_set[self.sent_column]
-        test_labels = self.test_set[self.target_column]
+        self.test_texts = test_set[self.sent_column]
+        self.test_labels = test_set[self.target_column]
 
     def load_algorithms(self) -> int:
         self.models = {}
 
         for model_type in self.model_list:
             algo = model_type(self.task_number)
+            algo.load_datasets(
+                self.train_texts,
+                self.train_labels,
+                self.validation_texts,
+                self.validation_labels,
+                self.test_texts,
+                self.test_labels,
+            )
             self.models[algo.name] = algo
-        print(self.models)
 
+        self.__print(self.models)
         return len(self.models)
+
+    def run_optimization(self, n_trials: int = 5) -> None:
+
+        for model in self.models:
+            study = optuna.create_study(direction="minimize")
+            study.optimize(self.__objective, n_trials, model)

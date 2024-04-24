@@ -46,7 +46,7 @@ def read_fm_setup() -> dict:
 
 
 # Use framework
-def start_framework(fm_setup: dict):
+def run_framework(fm_setup: dict):
 
     # Framework variables
     task_number = fm_setup["task"]
@@ -56,18 +56,36 @@ def start_framework(fm_setup: dict):
         dataset_name, task_number
     )
 
-    # 1. Select the argument mining task of interest
+    # 1. Select the argument mining task of interest:
+    # - T1: identification of argumentative fragments in an input text
+    # - T2: classification of such fragments into argument components (e.g., claims and premises)
+    # - T3: recognition of relations (e.g., support and attack) between pairs of argument components
     fm_engine = Engine(True, task_number)
 
-    # 2. Select a tabular corpus and split it into 3 datasets for the selected task
+    # 2. Select a tabular corpus and split it into 3 datasets for the selected task.
+    # Tabular datasets should reflect the argument model used (commonly, in labels).
     fm_engine.load_data(dataset_path, text_column, label_column, label_dict)
     fm_engine.split_data(
         test_size=0.1, validation_size=0.1, shuffled=True, random_state=42
     )
-    # fm_engine.create_features()
 
     # 3. Choose learning algorithms/approaches:
     fm_engine.load_algorithms()
+
+    # 4. Select hyperparameter optimization approach:
+    # - Exhaustive search among discrete values with GridSearch (not recommended).
+    # - Optimized search in uniform space with Optuna
+    # - Optimized search in a logarithmic space with Optuna
+
+    # 5. Select the metric(s) of interest: Accuracy, Precision, Recall, F1-score
+
+    # 6. For all selected algorithms, run:
+    # - Create model from training data
+    # - Optimize hyperparameters with respect to the validation data
+    # - Keep the configuration that minimizes the loss function
+    # - Evaluate generated model with testing data
+    # - Save results for the current model
+    fm_engine.run_optimization()
 
 
 #####################
@@ -75,7 +93,7 @@ def start_framework(fm_setup: dict):
 #####################
 if __name__ == "__main__":
     fm_setup = read_fm_setup()
-    start_framework(fm_setup)
+    run_framework(fm_setup)
     gc.collect()
 #####################
 #### END PROGRAM ####

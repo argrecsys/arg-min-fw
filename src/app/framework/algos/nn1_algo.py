@@ -1,6 +1,6 @@
-import pandas as pd
-from keras.api.models import Sequential
-from keras.api.layers import Dense
+from tf_keras.models import Sequential
+from tf_keras.layers import Dense
+from tf_keras.preprocessing import text
 
 
 # Relu 16 + Sigmoid 1
@@ -9,7 +9,7 @@ class NN1Model:
     def __init__(self, num_task: int):
         self.name = "nn1_algo"
         self.num_task = num_task
-        self.input_size = 1
+        self.input_size = 1000
 
         if num_task == 1:
             self.last_activation = "sigmoid"
@@ -39,8 +39,29 @@ class NN1Model:
             },
         }
 
-    def load_dataset(self):
-        pass
+    def load_datasets(
+        self,
+        training_texts,
+        training_labels,
+        validation_texts,
+        validation_labels,
+        test_texts,
+        test_labels,
+        vocabulary_size: int = 1000,
+    ):
+        # Construction of an index (vocabulary) for the 1000 most frequent words in the training data set
+        tokenizer = text.Tokenizer(num_words=vocabulary_size)
+        tokenizer.fit_on_texts(training_texts)
+
+        # Vectorization of texts using one-hot encoding representation
+        self.x_training = tokenizer.texts_to_matrix(training_texts, mode="binary")
+        self.y_training = training_labels
+        self.x_validation = tokenizer.texts_to_matrix(validation_texts, mode="binary")
+        self.y_validation = validation_labels
+        self.x_test = tokenizer.texts_to_matrix(test_texts, mode="binary")
+        self.y_test = test_labels
+
+        self.input_size = self.x_training[0].shape[0]
 
     def create_model(self):
         model = Sequential()
@@ -56,16 +77,3 @@ class NN1Model:
 
     def get_model_output_size(self):
         return self.last_units
-
-    def model_compile(self):
-        self.model.compile(
-            loss="binary_crossentropy", optimizer="adam", metrics=["accuracy"]
-        )
-        self.model.summary()
-
-    def model_fit(self, y_training, y_validation, y_test):
-        y_training = pd.to_numeric(y_training, errors="coerce")
-        y_validation = pd.to_numeric(y_validation, errors="coerce")
-        y_test = pd.to_numeric(y_test, errors="coerce")
-        # history = self.model.fit(x_training, y_training, epochs=100, batch_size=32, validation_data=(x_validation, y_validation), verbose=1)
-        return None  # history
