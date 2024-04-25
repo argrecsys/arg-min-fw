@@ -1,3 +1,4 @@
+import pandas as pd
 from tf_keras.models import Sequential
 from tf_keras.layers import Dense
 from tf_keras.preprocessing import text
@@ -54,26 +55,32 @@ class NN1Model:
         tokenizer.fit_on_texts(training_texts)
 
         # Vectorization of texts using one-hot encoding representation
-        self.x_training = tokenizer.texts_to_matrix(training_texts, mode="binary")
-        self.y_training = training_labels
-        self.x_validation = tokenizer.texts_to_matrix(validation_texts, mode="binary")
-        self.y_validation = validation_labels
-        self.x_test = tokenizer.texts_to_matrix(test_texts, mode="binary")
-        self.y_test = test_labels
+        x_training = tokenizer.texts_to_matrix(training_texts, mode="binary")
+        y_training = training_labels
+        x_validation = tokenizer.texts_to_matrix(validation_texts, mode="binary")
+        y_validation = validation_labels
+        x_test = tokenizer.texts_to_matrix(test_texts, mode="binary")
+        y_test = test_labels
 
-        self.input_size = self.x_training[0].shape[0]
+        self.input_size = x_training[0].shape[0]
+
+        y_training = pd.to_numeric(y_training, errors="coerce")
+        y_validation = pd.to_numeric(y_validation, errors="coerce")
+        y_test = pd.to_numeric(y_test, errors="coerce")
+
+        # Build final datasets
+        self.training_ds = (x_training, y_training)
+        self.validation_ds = (x_validation, y_validation)
+        self.test_ds = (x_test, y_test)
 
     def get_ds_training(self) -> tuple:
-        training_ds = (self.x_training, self.y_training)
-        return training_ds
+        return self.training_ds
 
     def get_ds_validation(self) -> tuple:
-        validation_ds = (self.x_validation, self.y_validation)
-        return validation_ds
+        return self.validation_ds
 
     def get_ds_test(self) -> tuple:
-        test_ds = (self.x_test, self.y_test)
-        return test_ds
+        return self.test_ds
 
     def create_model(self):
         model = Sequential()

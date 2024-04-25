@@ -30,25 +30,28 @@ class Engine:
         validation_dataset = algorithm.get_ds_validation()
 
         # Adjustable hyperparameters
-        hp_learning_rate = trial.suggest_float("learning_rate", 1e-6, 1e-4, log=True)
-        hp_epsilon = trial.suggest_float("epsilon", 1e-9, 1e-7, log=True)
-        hp_epochs = trial.suggest_int("epochs", 2, 7, step=1)
+        hp_learning_rate = trial.suggest_float("learning_rate", 1e-6, 1e-2, log=True)
+        hp_epsilon = trial.suggest_float("epsilon", 1e-9, 1e-6, log=True)
+        hp_epochs = trial.suggest_int("epochs", 2, 50, step=1)
         optimizer = tf_keras.optimizers.Adam(
             learning_rate=hp_learning_rate, epsilon=hp_epsilon, clipnorm=1.0
         )
 
-        # Fixed hyperparameters
-        loss = tf_keras.losses.SparseCategoricalCrossentropy(from_logits=True)
-        metric = tf_keras.metrics.SparseCategoricalAccuracy("accuracy")
-
-        model.compile(optimizer=optimizer, loss=loss, metrics=[metric])
+        model.compile(
+            optimizer=optimizer, loss="binary_crossentropy", metrics=["accuracy"]
+        )
 
         # Train and evaluate using tf.keras.Model.fit()
         history = model.fit(
-            train_dataset, validation_data=validation_dataset, epochs=hp_epochs
+            x=train_dataset[0],
+            y=train_dataset[1],
+            batch_size=32,
+            epochs=hp_epochs,
+            validation_data=validation_dataset,
         )
+        print(history)
 
-        return history.history["val_accuracy"][-1]
+        return -history.history["val_accuracy"][-1]
 
     def load_data(
         self, dataset_path: str, text_column: str, label_column: str, label_dict: dict
@@ -126,11 +129,23 @@ class Engine:
 
         return len(self.algorithms)
 
-    def run_optimization(self, n_trials: int = 5) -> None:
+    def run_optimization(self, n_trials: int = 10) -> None:
 
-        for name, algorithm in self.algorithms.items():
-            print(f"{datetime.now()} - Optimizing model: {name}")
+        for index, name in enumerate(self.algorithms):
+            algorithm = self.algorithms[name]
+            study_name = f"{name}-{index}"
+            print(f"{datetime.now()} - Optimizing model: {study_name}")
+
+            # Optimaze model
             objective_with_model = partial(self.__objective, algorithm=algorithm)
-
-            study = optuna.create_study(direction="minimize")
+            study = optuna.create_study(study_name=study_name, direction="minimize")
             study.optimize(objective_with_model, n_trials)
+
+            # Display best result
+            best_trial = study.best_trial
+            print(f"Number of finished trials: {len(study.trials)}")
+            print("Best trial:")
+            print(f"  Value: {-best_trial.value}")
+            print("  Params:")
+            for key, value in best_trial.params.items():
+                print(f"    {key}: {value}")
