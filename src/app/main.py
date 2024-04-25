@@ -85,7 +85,7 @@ def run_framework(fm_setup: dict):
     # - Keep the configuration that minimizes the loss function
     # - Evaluate generated model with testing data
     # - Save results for the current model
-    fm_engine.run_optimization()
+    fm_engine.run_optimization(n_jobs=4, n_trials=50)
 
 
 #####################
