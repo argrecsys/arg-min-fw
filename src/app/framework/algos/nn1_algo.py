@@ -26,7 +26,7 @@ class NN1Model:
             self.last_activation = None
             self.last_units = None
 
-        self.hyperparam = {
+        self.hyperparams = {
             "learning_rate": {"min_value": 1e-6, "max_value": 1e-4, "dist": "log"},
             "epsilon": {"min_value": 1e-9, "max_value": 1e-7, "dist": "log"},
             "epochs": {"min_value": 10, "max_value": 100, "dist": "lineal", "step": 1},
@@ -82,14 +82,16 @@ class NN1Model:
     def get_ds_test(self) -> tuple:
         return self.test_ds
 
-    def create_model(self):
+    def create_model(self, input_units: int):
         model = Sequential()
-        model.add(Dense(units=16, activation="relu", input_shape=(self.input_size,)))
+        model.add(
+            Dense(units=input_units, activation="relu", input_shape=(self.input_size,))
+        )
         model.add(Dense(units=self.last_units, activation=self.last_activation))
         return model
 
     def get_hyper_params(self):
-        return self.hyperparam
+        return self.hyperparams
 
     def get_model_output_size(self):
         return self.last_units

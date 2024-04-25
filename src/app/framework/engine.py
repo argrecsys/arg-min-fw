@@ -1,11 +1,17 @@
+# Basic Python libraries
+import time
 from datetime import datetime
 import pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.utils import shuffle
-import optuna
-import tf_keras
 from functools import partial
 
+# ML/DL libraries
+from sklearn.model_selection import train_test_split
+from sklearn.utils import shuffle
+import tf_keras
+from tf_keras.callbacks import EarlyStopping
+import optuna
+
+# Modules
 from .algos.nn1_algo import NN1Model
 
 
@@ -24,19 +30,32 @@ class Engine:
 
     def __objective(self, trial, algorithm):
 
-        # Model variables
-        model = algorithm.create_model()
+        # Datasets
         train_dataset = algorithm.get_ds_training()
         validation_dataset = algorithm.get_ds_validation()
 
         # Adjustable hyperparameters
-        hp_learning_rate = trial.suggest_float("learning_rate", 1e-6, 1e-2, log=True)
+        hp_learning_rate = trial.suggest_float("learning_rate", 1e-7, 1e-2, log=True)
         hp_epsilon = trial.suggest_float("epsilon", 1e-9, 1e-6, log=True)
-        hp_epochs = trial.suggest_int("epochs", 2, 50, step=1)
+        hp_epochs = trial.suggest_int("epochs", 5, 50, step=1)
+        hp_batch_size = trial.suggest_categorical("batch_size", [16, 32, 64, 128])
+        hp_input_units = trial.suggest_categorical("input_units", [16, 32])
+
+        # Fixed hyperparameters
         optimizer = tf_keras.optimizers.Adam(
             learning_rate=hp_learning_rate, epsilon=hp_epsilon, clipnorm=1.0
         )
+        # loss = tf_keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+        # metric = tf_keras.metrics.SparseCategoricalAccuracy("accuracy")
+        # metrics = [tf_keras.metrics.BinaryAccuracy(), tf_keras.metrics.FalseNegatives()]
 
+        # Define EarlyStopping callback
+        early_stopping = EarlyStopping(
+            monitor="val_accuracy", patience=5, mode="max", verbose=1
+        )
+
+        # Create ML/DL model
+        model = algorithm.create_model(hp_input_units)
         model.compile(
             optimizer=optimizer, loss="binary_crossentropy", metrics=["accuracy"]
         )
@@ -45,11 +64,11 @@ class Engine:
         history = model.fit(
             x=train_dataset[0],
             y=train_dataset[1],
-            batch_size=32,
+            batch_size=hp_batch_size,
             epochs=hp_epochs,
             validation_data=validation_dataset,
+            callbacks=[early_stopping],
         )
-        print(history)
 
         return -history.history["val_accuracy"][-1]
 
@@ -129,7 +148,8 @@ class Engine:
 
         return len(self.algorithms)
 
-    def run_optimization(self, n_trials: int = 10) -> None:
+    def run_optimization(self, n_jobs: int = 1, n_trials: int = 10) -> None:
+        start_time = time.time()
 
         for index, name in enumerate(self.algorithms):
             algorithm = self.algorithms[name]
@@ -139,7 +159,7 @@ class Engine:
             # Optimaze model
             objective_with_model = partial(self.__objective, algorithm=algorithm)
             study = optuna.create_study(study_name=study_name, direction="minimize")
-            study.optimize(objective_with_model, n_trials)
+            study.optimize(objective_with_model, n_trials=n_trials, n_jobs=n_jobs)
 
             # Display best result
             best_trial = study.best_trial
@@ -149,3 +169,7 @@ class Engine:
             print("  Params:")
             for key, value in best_trial.params.items():
                 print(f"    {key}: {value}")
+
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        print(f"Elapsed time: {elapsed_time} seconds")
