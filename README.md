@@ -6,12 +6,25 @@ Whether you're a researcher, developer, or enthusiast in the field of argumentat
 
 ## Get Started
 
-Execute the following commands in your terminal to condition the environment to run the argument mining framework:
+Execute the following commands in your terminal (such as PowerShell) to condition the environment to run the argument mining framework:
 
 ```console
-cd /arg-min-fm
+cd /arg-min-fw
 python -m venv .venv
 .venv/Scripts/activate
+pip install -r requirements.txt
+```
+
+To run the argument mining framework execute the following command in the terminal:
+
+```console
+python ./src/app/main.py
+```
+
+Deactivate the virtual environment when done:
+
+```console
+deactivate
 ```
 
 ## Authors
