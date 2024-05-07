@@ -25,16 +25,17 @@ class Engine:
         self.target_column = "label"
         self.model_list = [FFNDenseModel, FFNDense2Model]
 
-    def __print(self, values) -> None:
+    def __print(self, message) -> None:
         if self.verbose:
-            print(values)
+            current_time_utc = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            print(f"{current_time_utc }: {message}")
 
     def __get_hyperparams(self, trial, hyperparam_setup) -> dict:
         hyperparams = {}
 
         # Learning rate
         hp_name = "learning_rate"
-        learning_rate_setup = hyperparam_setup[hp_name]
+        learning_rate_setup = hyperparam_setup.get(hp_name)
         hp_learning_rate = trial.suggest_float(
             hp_name,
             learning_rate_setup["min_value"],
@@ -45,7 +46,7 @@ class Engine:
 
         # Epsilon
         hp_name = "epsilon"
-        epsilon_setup = hyperparam_setup[hp_name]
+        epsilon_setup = hyperparam_setup.get(hp_name)
         hp_epsilon = trial.suggest_float(
             hp_name,
             epsilon_setup["min_value"],
@@ -56,7 +57,7 @@ class Engine:
 
         # Number of epochs
         hp_name = "epochs"
-        epochs_setup = hyperparam_setup[hp_name]
+        epochs_setup = hyperparam_setup.get(hp_name)
         hp_epochs = trial.suggest_int(
             hp_name,
             epochs_setup["min_value"],
@@ -67,7 +68,7 @@ class Engine:
 
         # Batch size
         hp_name = "batch_size"
-        batch_size_setup = hyperparam_setup[hp_name]
+        batch_size_setup = hyperparam_setup.get(hp_name)
         sequence = [
             batch_size_setup["min_value"] * (2**i) for i in range(batch_size_setup["n"])
         ]
@@ -76,7 +77,7 @@ class Engine:
 
         # Number of hidden layers
         hp_name = "num_layers"
-        num_layers_setup = hyperparam_setup[hp_name]
+        num_layers_setup = hyperparam_setup.get(hp_name)
         hp_num_layers = trial.suggest_int(
             hp_name,
             num_layers_setup["min_value"],
@@ -87,7 +88,7 @@ class Engine:
 
         # Number of units per layer
         hp_name = "num_units"
-        num_units_setup = hyperparam_setup[hp_name]
+        num_units_setup = hyperparam_setup.get(hp_name)
         hp_num_units = trial.suggest_int(
             hp_name,
             num_units_setup["min_value"],
@@ -98,7 +99,7 @@ class Engine:
 
         # Dropout rate
         hp_name = "dropout"
-        dropout_setup = hyperparam_setup[hp_name]
+        dropout_setup = hyperparam_setup.get(hp_name)
         if dropout_setup:
             hp_dropout = trial.suggest_float(
                 hp_name,
@@ -143,7 +144,7 @@ class Engine:
         )
 
         # Create ML/DL model
-        if hp_dropout:
+        if hp_dropout is not None:
             model = algorithm.create_model(hp_num_units, hp_num_layers, hp_dropout)
         else:
             model = algorithm.create_model(hp_num_units, hp_num_layers)
@@ -245,7 +246,7 @@ class Engine:
         for index, name in enumerate(self.algorithms):
             algorithm = self.algorithms[name]
             study_name = f"{name}-{index}"
-            print(f"{datetime.now()} - Optimizing model: {study_name}")
+            self.__print(f"{datetime.now()} - Optimizing model: {study_name}")
 
             # Optimaze model
             objective_with_model = partial(self.__objective, algorithm=algorithm)
@@ -254,13 +255,13 @@ class Engine:
 
             # Display best result
             best_trial = study.best_trial
-            print(f"Number of finished trials: {len(study.trials)}")
-            print("Best trial:")
-            print(f"  Value: {-best_trial.value}")
-            print("  Params:")
+            self.__print(f"Number of finished trials: {len(study.trials)}")
+            self.__print("Best trial:")
+            self.__print(f"  Value: {-best_trial.value}")
+            self.__print("  Params:")
             for key, value in best_trial.params.items():
-                print(f"    {key}: {value}")
+                self.__print(f"    {key}: {value}")
 
         end_time = time.time()
         elapsed_time = end_time - start_time
-        print(f"Elapsed time: {elapsed_time} seconds")
+        self.__print(f"Elapsed time: {elapsed_time} seconds")

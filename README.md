@@ -18,7 +18,7 @@ pip install -r requirements.txt
 To run the argument mining framework execute the following command in the terminal:
 
 ```console
-run ./src/app/main.py
+python ./src/app/main.py
 ```
 
 Deactivate the virtual environment when done:
