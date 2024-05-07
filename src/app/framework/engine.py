@@ -160,6 +160,7 @@ class Engine:
             epochs=hp_epochs,
             validation_data=validation_dataset,
             callbacks=[early_stopping],
+            verbose=False,
         )
 
         return -history.history["val_accuracy"][-1]
