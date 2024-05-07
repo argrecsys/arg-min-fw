@@ -1,14 +1,14 @@
 import pandas as pd
 from tf_keras.models import Sequential
-from tf_keras.layers import Dense
+from tf_keras.layers import Dense, Dropout
 from tf_keras.preprocessing import text
 
 
 # Relu 16 + Sigmoid 1
-class NN1Model:
+class FFNDense2Model:
 
     def __init__(self, num_task: int):
-        self.name = "nn1_algo"
+        self.name = "Feed Forwward Network Dense + Dropout"
         self.num_task = num_task
         self.input_size = 1000
 
@@ -27,16 +27,26 @@ class NN1Model:
             self.last_units = None
 
         self.hyperparams = {
-            "learning_rate": {"min_value": 1e-6, "max_value": 1e-4, "dist": "log"},
-            "epsilon": {"min_value": 1e-9, "max_value": 1e-7, "dist": "log"},
-            "epochs": {"min_value": 10, "max_value": 100, "dist": "lineal", "step": 1},
-            "num_layers": {"min_value": 1, "max_value": 5, "dist": "lineal", "step": 1},
-            "units": {"min_value": 2, "max_value": 16, "dist": "lineal", "step": 1},
+            "learning_rate": {"min_value": 1e-7, "max_value": 1e-2, "dist": "log"},
+            "epsilon": {"min_value": 1e-9, "max_value": 1e-6, "dist": "log"},
+            "epochs": {"min_value": 1, "max_value": 50, "dist": "lineal", "step": 1},
             "batch_size": {
-                "min_value": 2,
-                "max_value": 16,
+                "min_value": 16,
+                "n": 4,
+                "dist": "cat",
+            },
+            "num_layers": {"min_value": 1, "max_value": 5, "dist": "lineal", "step": 1},
+            "num_units": {
+                "min_value": 64,
+                "max_value": 512,
                 "dist": "lineal",
-                "step": 1,
+                "step": 64,
+            },
+            "dropout": {
+                "min_value": 0.0,
+                "max_value": 0.75,
+                "dist": "lineal",
+                "step": 0.15,
             },
         }
 
@@ -82,16 +92,17 @@ class NN1Model:
     def get_ds_test(self) -> tuple:
         return self.test_ds
 
-    def create_model(self, input_units: int):
+    def create_model(self, input_units: int, num_layers: int, drop: float):
         model = Sequential()
-        model.add(
-            Dense(units=input_units, activation="relu", input_shape=(self.input_size,))
-        )
+        for layer in range(num_layers):
+            model.add(
+                Dense(
+                    units=input_units, activation="relu", input_shape=(self.input_size,)
+                )
+            )
+            model.add(Dropout(drop))
         model.add(Dense(units=self.last_units, activation=self.last_activation))
         return model
 
-    def get_hyper_params(self):
+    def get_hyperparams(self):
         return self.hyperparams
-
-    def get_model_output_size(self):
-        return self.last_units

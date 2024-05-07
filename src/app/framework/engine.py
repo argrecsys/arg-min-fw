@@ -12,7 +12,8 @@ from tf_keras.callbacks import EarlyStopping
 import optuna
 
 # Modules
-from .algos.nn1_algo import NN1Model
+from .algos.ffn_dense_algo import FFNDenseModel
+from .algos.ffn_dense2_algo import FFNDense2Model
 
 
 class Engine:
@@ -22,11 +23,95 @@ class Engine:
         self.verbose = verbose
         self.sent_column = "sentence"
         self.target_column = "label"
-        self.model_list = [NN1Model]
+        self.model_list = [FFNDenseModel, FFNDense2Model]
 
     def __print(self, values) -> None:
         if self.verbose:
             print(values)
+
+    def __get_hyperparams(self, trial, hyperparam_setup) -> dict:
+        hyperparams = {}
+
+        # Learning rate
+        hp_name = "learning_rate"
+        learning_rate_setup = hyperparam_setup[hp_name]
+        hp_learning_rate = trial.suggest_float(
+            hp_name,
+            learning_rate_setup["min_value"],
+            learning_rate_setup["max_value"],
+            log=(learning_rate_setup["dist"] == "log"),
+        )
+        hyperparams[hp_name] = hp_learning_rate
+
+        # Epsilon
+        hp_name = "epsilon"
+        epsilon_setup = hyperparam_setup[hp_name]
+        hp_epsilon = trial.suggest_float(
+            hp_name,
+            epsilon_setup["min_value"],
+            epsilon_setup["max_value"],
+            log=(learning_rate_setup["dist"] == "log"),
+        )
+        hyperparams[hp_name] = hp_epsilon
+
+        # Number of epochs
+        hp_name = "epochs"
+        epochs_setup = hyperparam_setup[hp_name]
+        hp_epochs = trial.suggest_int(
+            hp_name,
+            epochs_setup["min_value"],
+            epochs_setup["max_value"],
+            step=epochs_setup["step"],
+        )
+        hyperparams[hp_name] = hp_epochs
+
+        # Batch size
+        hp_name = "batch_size"
+        batch_size_setup = hyperparam_setup[hp_name]
+        sequence = [
+            batch_size_setup["min_value"] * (2**i) for i in range(batch_size_setup["n"])
+        ]
+        hp_batch_size = trial.suggest_categorical(hp_name, sequence)
+        hyperparams[hp_name] = hp_batch_size
+
+        # Number of hidden layers
+        hp_name = "num_layers"
+        num_layers_setup = hyperparam_setup[hp_name]
+        hp_num_layers = trial.suggest_int(
+            hp_name,
+            num_layers_setup["min_value"],
+            num_layers_setup["max_value"],
+            step=num_layers_setup["step"],
+        )
+        hyperparams[hp_name] = hp_num_layers
+
+        # Number of units per layer
+        hp_name = "num_units"
+        num_units_setup = hyperparam_setup[hp_name]
+        hp_num_units = trial.suggest_int(
+            hp_name,
+            num_units_setup["min_value"],
+            num_units_setup["max_value"],
+            step=num_units_setup["step"],
+        )
+        hyperparams[hp_name] = hp_num_units
+
+        # Dropout rate
+        hp_name = "dropout"
+        dropout_setup = hyperparam_setup[hp_name]
+        if dropout_setup:
+            hp_dropout = trial.suggest_float(
+                hp_name,
+                dropout_setup["min_value"],
+                dropout_setup["max_value"],
+                log=(dropout_setup["dist"] == "log"),
+                step=dropout_setup["step"],
+            )
+            hyperparams[hp_name] = hp_dropout
+        else:
+            hyperparams[hp_name] = None
+
+        return hyperparams
 
     def __objective(self, trial, algorithm):
 
@@ -35,11 +120,14 @@ class Engine:
         validation_dataset = algorithm.get_ds_validation()
 
         # Adjustable hyperparameters
-        hp_learning_rate = trial.suggest_float("learning_rate", 1e-7, 1e-2, log=True)
-        hp_epsilon = trial.suggest_float("epsilon", 1e-9, 1e-6, log=True)
-        hp_epochs = trial.suggest_int("epochs", 5, 50, step=1)
-        hp_batch_size = trial.suggest_categorical("batch_size", [16, 32, 64, 128])
-        hp_input_units = trial.suggest_categorical("input_units", [16, 32])
+        hyperparams = self.__get_hyperparams(trial, algorithm.get_hyperparams())
+        hp_learning_rate = hyperparams["learning_rate"]
+        hp_epsilon = hyperparams["epsilon"]
+        hp_epochs = hyperparams["epochs"]
+        hp_batch_size = hyperparams["batch_size"]
+        hp_num_units = hyperparams["num_units"]
+        hp_num_layers = hyperparams["num_layers"]
+        hp_dropout = hyperparams["dropout"]
 
         # Fixed hyperparameters
         optimizer = tf_keras.optimizers.Adam(
@@ -55,7 +143,10 @@ class Engine:
         )
 
         # Create ML/DL model
-        model = algorithm.create_model(hp_input_units)
+        if hp_dropout:
+            model = algorithm.create_model(hp_num_units, hp_num_layers, hp_dropout)
+        else:
+            model = algorithm.create_model(hp_num_units, hp_num_layers)
         model.compile(
             optimizer=optimizer, loss="binary_crossentropy", metrics=["accuracy"]
         )
