@@ -32,6 +32,7 @@ Created on Apr 10, 2024
 Created by:
 - <a href="http://arantxa.ii.uam.es/~cantador/" target="_blank">Iv&aacute;n Cantador</a>
 - <a href="https://github.com/ansegura7" target="_blank">Andrés Segura-Tinoco</a>
+- <a href="https://github.com/lanxerot" target="_blank">Carlos Ramos-Mateos</a>
 
 ## License
 This project is licensed under the terms of the <a href="https://github.com/argrecsys/arg-nn/blob/main/LICENSE">Apache License 2.0</a>.
