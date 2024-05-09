@@ -14,6 +14,8 @@ import optuna
 # Modules
 from .algos.ffn_dense_algo import FFNDenseModel
 from .algos.ffn_dense2_algo import FFNDense2Model
+from .algos.lstm_stacked_algo import StackedLSTMModel
+from .algos.lstm_bidirectional_algo import BiLSTMModel
 
 
 class Engine:
@@ -23,7 +25,7 @@ class Engine:
         self.verbose = verbose
         self.sent_column = "sentence"
         self.target_column = "label"
-        self.model_list = [FFNDenseModel, FFNDense2Model]
+        self.model_list = [FFNDenseModel, FFNDense2Model, StackedLSTMModel, BiLSTMModel]
 
     def __print(self, message) -> None:
         if self.verbose:
@@ -35,78 +37,95 @@ class Engine:
 
         # Learning rate
         hp_name = "learning_rate"
-        learning_rate_setup = hyperparam_setup.get(hp_name)
+        setup_learning_rate = hyperparam_setup.get(hp_name)
         hp_learning_rate = trial.suggest_float(
             hp_name,
-            learning_rate_setup["min_value"],
-            learning_rate_setup["max_value"],
-            log=(learning_rate_setup["dist"] == "log"),
+            setup_learning_rate["min_value"],
+            setup_learning_rate["max_value"],
+            log=(setup_learning_rate["dist"] == "log"),
         )
         hyperparams[hp_name] = hp_learning_rate
 
         # Epsilon
         hp_name = "epsilon"
-        epsilon_setup = hyperparam_setup.get(hp_name)
+        setup_epsilon = hyperparam_setup.get(hp_name)
         hp_epsilon = trial.suggest_float(
             hp_name,
-            epsilon_setup["min_value"],
-            epsilon_setup["max_value"],
-            log=(learning_rate_setup["dist"] == "log"),
+            setup_epsilon["min_value"],
+            setup_epsilon["max_value"],
+            log=(setup_epsilon["dist"] == "log"),
         )
         hyperparams[hp_name] = hp_epsilon
 
         # Number of epochs
         hp_name = "epochs"
-        epochs_setup = hyperparam_setup.get(hp_name)
+        setup_epochs = hyperparam_setup.get(hp_name)
         hp_epochs = trial.suggest_int(
             hp_name,
-            epochs_setup["min_value"],
-            epochs_setup["max_value"],
-            step=epochs_setup["step"],
+            setup_epochs["min_value"],
+            setup_epochs["max_value"],
+            step=setup_epochs["step"],
         )
         hyperparams[hp_name] = hp_epochs
 
         # Batch size
         hp_name = "batch_size"
-        batch_size_setup = hyperparam_setup.get(hp_name)
+        setup_batch_size = hyperparam_setup.get(hp_name)
         sequence = [
-            batch_size_setup["min_value"] * (2**i) for i in range(batch_size_setup["n"])
+            setup_batch_size["min_value"] * (2**i) for i in range(setup_batch_size["n"])
         ]
         hp_batch_size = trial.suggest_categorical(hp_name, sequence)
         hyperparams[hp_name] = hp_batch_size
 
-        # Number of hidden layers
-        hp_name = "num_layers"
-        num_layers_setup = hyperparam_setup.get(hp_name)
-        hp_num_layers = trial.suggest_int(
-            hp_name,
-            num_layers_setup["min_value"],
-            num_layers_setup["max_value"],
-            step=num_layers_setup["step"],
-        )
-        hyperparams[hp_name] = hp_num_layers
-
         # Number of units per layer
         hp_name = "num_units"
-        num_units_setup = hyperparam_setup.get(hp_name)
+        setup_num_units = hyperparam_setup.get(hp_name)
         hp_num_units = trial.suggest_int(
             hp_name,
-            num_units_setup["min_value"],
-            num_units_setup["max_value"],
-            step=num_units_setup["step"],
+            setup_num_units["min_value"],
+            setup_num_units["max_value"],
+            step=setup_num_units["step"],
         )
         hyperparams[hp_name] = hp_num_units
 
-        # Dropout rate
+        # Number of hidden layers (optional)
+        hp_name = "num_layers"
+        setup_num_layers = hyperparam_setup.get(hp_name)
+        if setup_num_layers:
+            hp_num_layers = trial.suggest_int(
+                hp_name,
+                setup_num_layers["min_value"],
+                setup_num_layers["max_value"],
+                step=setup_num_layers["step"],
+            )
+            hyperparams[hp_name] = hp_num_layers
+        else:
+            hyperparams[hp_name] = None
+
+        # Number of embedding units (optional)
+        hp_name = "num_embedding_units"
+        setup_num_embedding_units = hyperparam_setup.get(hp_name)
+        if setup_num_embedding_units:
+            hp_num_embedding_units = trial.suggest_int(
+                hp_name,
+                setup_num_embedding_units["min_value"],
+                setup_num_embedding_units["max_value"],
+                step=setup_num_embedding_units["step"],
+            )
+            hyperparams[hp_name] = hp_num_embedding_units
+        else:
+            hyperparams[hp_name] = None
+
+        # Dropout rate (optional)
         hp_name = "dropout"
-        dropout_setup = hyperparam_setup.get(hp_name)
-        if dropout_setup:
+        setup_dropout = hyperparam_setup.get(hp_name)
+        if setup_dropout:
             hp_dropout = trial.suggest_float(
                 hp_name,
-                dropout_setup["min_value"],
-                dropout_setup["max_value"],
-                log=(dropout_setup["dist"] == "log"),
-                step=dropout_setup["step"],
+                setup_dropout["min_value"],
+                setup_dropout["max_value"],
+                log=(setup_dropout["dist"] == "log"),
+                step=setup_dropout["step"],
             )
             hyperparams[hp_name] = hp_dropout
         else:
@@ -128,6 +147,7 @@ class Engine:
         hp_batch_size = hyperparams["batch_size"]
         hp_num_units = hyperparams["num_units"]
         hp_num_layers = hyperparams["num_layers"]
+        hp_num_embedding_units = hyperparams["num_embedding_units"]
         hp_dropout = hyperparams["dropout"]
 
         # Fixed hyperparameters
@@ -144,10 +164,19 @@ class Engine:
         )
 
         # Create ML/DL model
-        if hp_dropout is not None:
-            model = algorithm.create_model(hp_num_units, hp_num_layers, hp_dropout)
+        if hp_num_embedding_units is not None:
+            if hp_num_layers is None:
+                model = algorithm.create_model(hp_num_units, hp_num_embedding_units)
+            else:
+                model = algorithm.create_model(
+                    hp_num_units, hp_num_embedding_units, hp_num_layers
+                )
         else:
-            model = algorithm.create_model(hp_num_units, hp_num_layers)
+            if hp_dropout is None:
+                model = algorithm.create_model(hp_num_units, hp_num_layers)
+            else:
+                model = algorithm.create_model(hp_num_units, hp_num_layers, hp_dropout)
+
         model.compile(
             optimizer=optimizer, loss="binary_crossentropy", metrics=["accuracy"]
         )

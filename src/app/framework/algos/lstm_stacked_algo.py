@@ -1,14 +1,14 @@
 import pandas as pd
 from tf_keras.models import Sequential
-from tf_keras.layers import Dense, Dropout
+from tf_keras.layers import Dense, Embedding, LSTM
 from tf_keras.preprocessing import text
 
 
-# Relu 16 + Sigmoid 1
-class FFNDense2Model:
+# Embedding + Stacked LSTM + Dense(sigmoid/softmax)
+class StackedLSTMModel:
 
     def __init__(self, num_task: int):
-        self.name = "Feed Forwward Network Dense + Dropout"
+        self.name = "Embedding + Stacked LSTM"
         self.num_task = num_task
         self.input_size = 1000
 
@@ -42,11 +42,11 @@ class FFNDense2Model:
                 "dist": "lineal",
                 "step": 64,
             },
-            "dropout": {
-                "min_value": 0.0,
-                "max_value": 0.75,
+            "num_embedding_units": {
+                "min_value": 64,
+                "max_value": 512,
                 "dist": "lineal",
-                "step": 0.15,
+                "step": 64,
             },
         }
 
@@ -92,16 +92,19 @@ class FFNDense2Model:
     def get_ds_test(self) -> tuple:
         return self.test_ds
 
-    def create_model(self, input_units: int, num_layers: int, drop: float):
+    def create_model(
+        self,
+        input_lstm_units: int,
+        input_embedding_units: int,
+        num_layers: int,
+        vocabulary_size: int = 1000,
+    ):
         model = Sequential()
 
-        for layer in range(num_layers):
-            model.add(
-                Dense(
-                    units=input_units, activation="relu", input_shape=(self.input_size,)
-                )
-            )
-            model.add(Dropout(drop))
+        model.add(Embedding(vocabulary_size, input_embedding_units, mask_zero=True))
+        for layer in range(num_layers - 1):
+            model.add(LSTM(input_lstm_units, return_sequences=True))
+        model.add(LSTM(input_lstm_units))
         model.add(Dense(units=self.last_units, activation=self.last_activation))
 
         return model

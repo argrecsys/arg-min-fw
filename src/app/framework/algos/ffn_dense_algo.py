@@ -88,6 +88,7 @@ class FFNDenseModel:
 
     def create_model(self, input_units: int, num_layers: int):
         model = Sequential()
+
         for layer in range(num_layers):
             model.add(
                 Dense(
@@ -95,6 +96,7 @@ class FFNDenseModel:
                 )
             )
         model.add(Dense(units=self.last_units, activation=self.last_activation))
+
         return model
 
     def get_hyperparams(self):
