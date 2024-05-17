@@ -16,6 +16,7 @@ from .algos.ffn_dense_algo import FFNDenseModel
 from .algos.ffn_dense2_algo import FFNDense2Model
 from .algos.lstm_stacked_algo import StackedLSTMModel
 from .algos.lstm_bidirectional_algo import BiLSTMModel
+from .algos.beto_classifier_algo import BETOClassifierModel
 
 
 class Engine:
@@ -25,7 +26,13 @@ class Engine:
         self.verbose = verbose
         self.sent_column = "sentence"
         self.target_column = "label"
-        self.model_list = [FFNDenseModel, FFNDense2Model, StackedLSTMModel, BiLSTMModel]
+        self.model_list = [
+            FFNDenseModel,
+            FFNDense2Model,
+            StackedLSTMModel,
+            BiLSTMModel,
+            BETOClassifierModel,
+        ]
 
     def __print(self, message) -> None:
         if self.verbose:
@@ -189,7 +196,7 @@ class Engine:
             epochs=hp_epochs,
             validation_data=validation_dataset,
             callbacks=[early_stopping],
-            verbose=False,
+            verbose=True,
         )
 
         return -history.history["val_accuracy"][-1]
