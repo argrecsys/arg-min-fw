@@ -84,16 +84,19 @@ class Engine:
         hp_batch_size = trial.suggest_categorical(hp_name, sequence)
         hyperparams[hp_name] = hp_batch_size
 
-        # Number of units per layer
+        # Number of units per layer (optional)
         hp_name = "num_units"
         setup_num_units = hyperparam_setup.get(hp_name)
-        hp_num_units = trial.suggest_int(
-            hp_name,
-            setup_num_units["min_value"],
-            setup_num_units["max_value"],
-            step=setup_num_units["step"],
-        )
-        hyperparams[hp_name] = hp_num_units
+        if setup_num_units:
+            hp_num_units = trial.suggest_int(
+                hp_name,
+                setup_num_units["min_value"],
+                setup_num_units["max_value"],
+                step=setup_num_units["step"],
+            )
+            hyperparams[hp_name] = hp_num_units
+        else:
+            hyperparams[hp_name] = None
 
         # Number of hidden layers (optional)
         hp_name = "num_layers"
@@ -167,17 +170,21 @@ class Engine:
 
         # Define EarlyStopping callback
         early_stopping = EarlyStopping(
-            monitor="val_accuracy", patience=5, mode="max", verbose=1
+            monitor="val_accuracy", patience=5, mode="max", verbose=self.verbose
         )
 
         # Create ML/DL model
-        if hp_num_embedding_units is not None:
+        if hp_num_units is None and hp_num_layers is None:
+            model = algorithm.create_model()
+
+        elif hp_num_embedding_units is not None:
             if hp_num_layers is None:
                 model = algorithm.create_model(hp_num_units, hp_num_embedding_units)
             else:
                 model = algorithm.create_model(
                     hp_num_units, hp_num_embedding_units, hp_num_layers
                 )
+
         else:
             if hp_dropout is None:
                 model = algorithm.create_model(hp_num_units, hp_num_layers)
@@ -189,17 +196,35 @@ class Engine:
         )
 
         # Train and evaluate using tf.keras.Model.fit()
-        history = model.fit(
-            x=train_dataset[0],
-            y=train_dataset[1],
-            batch_size=hp_batch_size,
-            epochs=hp_epochs,
-            validation_data=validation_dataset,
-            callbacks=[early_stopping],
-            verbose=True,
-        )
+        if hp_num_units is None and hp_num_layers is None:
 
-        return -history.history["val_accuracy"][-1]
+            # Pretrained-based models
+            history = model.fit(
+                train_dataset,
+                validation_data=validation_dataset,
+                epochs=hp_epochs,
+                batch_size=hp_batch_size,
+                callbacks=[early_stopping],
+                verbose=self.verbose,
+            )
+
+            metric_value = history.history["val_accuracy"][-1]
+
+        else:
+            # FFN- and LSTM-based models
+            history = model.fit(
+                x=train_dataset[0],
+                y=train_dataset[1],
+                validation_data=validation_dataset,
+                epochs=hp_epochs,
+                batch_size=hp_batch_size,
+                callbacks=[early_stopping],
+                verbose=self.verbose,
+            )
+
+            metric_value = -history.history["val_accuracy"][-1]
+
+        return metric_value
 
     def load_data(
         self, dataset_path: str, text_column: str, label_column: str, label_dict: dict

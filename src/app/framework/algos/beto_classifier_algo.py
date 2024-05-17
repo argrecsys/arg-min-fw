@@ -115,13 +115,13 @@ class BETOClassifierModel:
         self.validation_ds = validation_dataset
         self.test_ds = test_dataset
 
-    def get_ds_training(self) -> tuple:
+    def get_ds_training(self) -> tf.data.Dataset:
         return self.training_ds
 
-    def get_ds_validation(self) -> tuple:
+    def get_ds_validation(self) -> tf.data.Dataset:
         return self.validation_ds
 
-    def get_ds_test(self) -> tuple:
+    def get_ds_test(self) -> tf.data.Dataset:
         return self.test_ds
 
     def create_model(self):
