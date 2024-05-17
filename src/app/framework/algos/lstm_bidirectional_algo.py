@@ -36,14 +36,14 @@ class BiLSTMModel:
                 "dist": "cat",
             },
             "num_units": {
-                "min_value": 64,
-                "max_value": 512,
+                "min_value": 128,
+                "max_value": 256,
                 "dist": "lineal",
                 "step": 64,
             },
             "num_embedding_units": {
-                "min_value": 64,
-                "max_value": 512,
+                "min_value": 128,
+                "max_value": 256,
                 "dist": "lineal",
                 "step": 64,
             },
