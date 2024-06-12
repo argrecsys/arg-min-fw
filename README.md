@@ -11,8 +11,8 @@ Execute the following commands in your terminal (such as PowerShell) to conditio
 ```console
 cd /arg-min-fw
 python -m venv .venv
-.venv/Scripts/activate
-pip install -r requirements.txt
+.venv/Scripts/activate (or, `source .venv/bin/activate` in Unix-like OS)
+pip install -r requirements-win.txt (or, `pip install -r requirements-unix.txt` in Unix-like OS)
 ```
 
 To run the argument mining framework execute the following command in the terminal:
