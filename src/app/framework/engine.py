@@ -3,6 +3,7 @@ import time
 from datetime import datetime
 import pandas as pd
 from functools import partial
+import logging
 
 # ML/DL libraries
 from sklearn.model_selection import train_test_split
@@ -17,6 +18,13 @@ from .algos.ffn_dense2_algo import FFNDense2Model
 from .algos.lstm_stacked_algo import StackedLSTMModel
 from .algos.lstm_bidirectional_algo import BiLSTMModel
 from .algos.beto_classifier_algo import BETOClassifierModel
+
+logging.basicConfig(
+    level=logging.INFO,
+    filename="src/log/engine_log.log",
+    filemode="w",
+    format="%(asctime)s %(levelname)s %(message)s",
+)
 
 
 class Engine:
@@ -33,11 +41,11 @@ class Engine:
             BiLSTMModel,
             BETOClassifierModel,
         ]
+        self.__print("Starting ArgMining framework")
 
     def __print(self, message) -> None:
         if self.verbose:
-            current_time_utc = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            print(f"{current_time_utc }: {message}")
+            logging.info(message)
 
     def __get_hyperparams(self, trial, hyperparam_setup) -> dict:
         hyperparams = {}
