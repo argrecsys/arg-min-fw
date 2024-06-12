@@ -22,7 +22,7 @@ from .algos.beto_classifier_algo import BETOClassifierModel
 logging.basicConfig(
     level=logging.INFO,
     filename="src/log/engine_log.log",
-    filemode="w",
+    filemode="a",
     format="%(asctime)s %(levelname)s %(message)s",
 )
 
@@ -41,7 +41,7 @@ class Engine:
             BiLSTMModel,
             BETOClassifierModel,
         ]
-        self.__print("Starting ArgMining framework")
+        self.__print(">> Starting ArgMining framework")
 
     def __print(self, message) -> None:
         if self.verbose:
@@ -237,6 +237,7 @@ class Engine:
     def load_data(
         self, dataset_path: str, text_column: str, label_column: str, label_dict: dict
     ) -> None:
+        self.__print(">> Loading datasets")
         self.dataset = pd.read_csv(dataset_path)
         self.dataset = self.dataset[[text_column, label_column]]
         self.dataset = self.dataset.rename(
@@ -294,6 +295,7 @@ class Engine:
         self.test_labels = test_set[self.target_column]
 
     def load_algorithms(self) -> int:
+        self.__print(">> Loading framework algorithms")
         self.algorithms = {}
 
         for model_type in self.model_list:
@@ -308,9 +310,12 @@ class Engine:
             )
             self.algorithms[algo.name] = algo
 
-        return len(self.algorithms)
+        n_algo = len(self.algorithms)
+        self.__print(f">> {n_algo} has been loaded")
+        return n_algo
 
     def run_optimization(self, n_jobs: int = 1, n_trials: int = 10) -> None:
+        self.__print(">> Start framework optimization")
         start_time = time.time()
 
         for index, name in enumerate(self.algorithms):
@@ -335,3 +340,5 @@ class Engine:
         end_time = time.time()
         elapsed_time = end_time - start_time
         self.__print(f"Elapsed time: {elapsed_time} seconds")
+        self.__print("End framework optimization")
+        self.__print("")
