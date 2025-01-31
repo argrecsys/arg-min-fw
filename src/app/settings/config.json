@@ -1,4 +1,23 @@
 {
-    "dataset": "dm-2019-annotated.csv",
-    "task": 1
+    "project": "decide-madrid",
+    "dataset": {
+        "path": "dm-2019-annotated.csv",
+        "target_var": "label"
+    },
+    "execution": {
+        "n_jobs": 2,
+        "n_trials": 20
+    },
+    "task": "classification",
+    "train": {
+        "methods": [
+            "feed-forward-dense-net"
+        ],
+        "val_ratio": 0.1,
+        "test_ratio": 0.1,
+        "patience_parc": 0.2,
+        "lost_fn": "",
+        "metrics": ""
+    },
+    "verbose": true
 }

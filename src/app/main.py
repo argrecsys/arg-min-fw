@@ -3,7 +3,7 @@
     Created by: Andrés Segura-Tinoco
     Version: 0.2.0
     Created on: Apr 10, 2024
-    Updated on: Apr 24, 2024
+    Updated on: Feb 01, 2025
     Description: Main class of the argument mining framework.
 """
 
@@ -39,7 +39,7 @@ def get_dataset_metadata(dataset_name: str, task_number: int) -> tuple:
 
 
 # Read data configuration
-def read_fm_setup() -> dict:
+def read_framework_setup() -> dict:
     filepath = "src/app/settings/config.json"
     setup = __get_dict_from_json(filepath)
     return setup
@@ -47,6 +47,9 @@ def read_fm_setup() -> dict:
 
 # Use framework
 def run_framework(fm_setup: dict):
+
+    # 0. Read framework setup variables
+    fm_setup = read_framework_setup()
 
     # Framework variables
     task_number = fm_setup["task"]
@@ -60,7 +63,7 @@ def run_framework(fm_setup: dict):
     # - T1: identification of argumentative fragments in an input text
     # - T2: classification of such fragments into argument components (e.g., claims and premises)
     # - T3: recognition of relations (e.g., support and attack) between pairs of argument components
-    fm_engine = Engine(True, task_number)
+    fm_engine = Engine(task_number, True)
 
     # 2. Select a tabular corpus and split it into 3 datasets for the selected task.
     # Tabular datasets should reflect the argument model used (commonly, in labels).
@@ -92,8 +95,7 @@ def run_framework(fm_setup: dict):
 ### START PROGRAM ###
 #####################
 if __name__ == "__main__":
-    fm_setup = read_fm_setup()
-    run_framework(fm_setup)
+    run_framework()
     gc.collect()
 #####################
 #### END PROGRAM ####
