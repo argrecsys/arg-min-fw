@@ -237,7 +237,7 @@ class Engine:
     def load_data(
         self, dataset_path: str, text_column: str, label_column: str, label_dict: dict
     ) -> None:
-        self.__print(">> Loading datasets")
+        self.__print(">> Loading dataset")
         self.dataset = pd.read_csv(dataset_path)
         self.dataset = self.dataset[[text_column, label_column]]
         self.dataset = self.dataset.rename(
